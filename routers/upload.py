@@ -7,6 +7,7 @@ from io import StringIO
 
 from database import get_db
 from transform import transform_excel
+from routers.auth import get_current_user
 
 router = APIRouter(prefix="/upload", tags=["Upload"])
 
@@ -14,7 +15,8 @@ router = APIRouter(prefix="/upload", tags=["Upload"])
 @router.post("/")
 async def upload_excel(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     if not file.filename.endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="File harus format .xlsx")
@@ -43,8 +45,7 @@ async def upload_excel(
         # Sebutkan kolom secara eksplisit tanpa id
         columns = ", ".join(df.columns.tolist())
         cursor.copy_expert(
-            f"COPY bsi_agen_monitoring ({columns}) FROM STDIN WITH CSV",
-            buffer
+            f"COPY bsi_agen_monitoring ({columns}) FROM STDIN WITH CSV", buffer
         )
         conn.commit()
         cursor.close()
@@ -55,7 +56,7 @@ async def upload_excel(
             "message": "Data berhasil diupload",
             "total_rows": len(df),
             "total_agen": df["kode_agen"].nunique(),
-            "total_periode": df["bulan"].nunique()
+            "total_periode": df["bulan"].nunique(),
         }
 
     except Exception as e:
