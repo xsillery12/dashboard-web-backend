@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional
 from database import get_db
+from routers.auth import get_current_user
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -52,6 +53,7 @@ def get_stats(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, region, area, cabang)
     query = f"""
@@ -79,6 +81,7 @@ def get_agen_aktif(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, region, area, cabang)
     query = f"""
@@ -93,7 +96,12 @@ def get_agen_aktif(
 
 # ── Filters ───────────────────────────────────────────────────────────
 @router.get("/filters")
-def get_filters(region: str = None, area: str = None, db: Session = Depends(get_db)):
+def get_filters(
+    region: str = None,
+    area: str = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     try:
         # Base WHERE
         where = "WHERE tipe_bulan='Bulanan'"
@@ -155,6 +163,7 @@ def get_chart_device(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, region, area, cabang)
     query = f"""
@@ -186,6 +195,7 @@ def get_chart_region(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, None, area, cabang)
     # Tambah exclude Aceh
@@ -218,6 +228,7 @@ def get_chart_aceh(
     month_to: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, "RO ACEH", None, cabang)
     query = f"""
@@ -250,6 +261,7 @@ def get_trend(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, region, area, cabang)
     query = f"""
@@ -284,6 +296,7 @@ def get_pareto(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     # Build filter untuk join ke bsi_agen_monitoring
     conditions = ["a.tipe_bulan = 'Bulanan'"]
@@ -371,6 +384,7 @@ def get_map(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, region, area, cabang)
     query = f"""
@@ -418,6 +432,7 @@ def get_top10(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, region, area, cabang)
     query = f"""
@@ -463,6 +478,7 @@ def get_all_agen(
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     where, params = build_filter(month_from, month_to, region, area, cabang)
     query = f"""
