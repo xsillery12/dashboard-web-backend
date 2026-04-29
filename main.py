@@ -23,7 +23,7 @@ allowed_origins = [
 
 # Tambah frontend URL dari environment variable kalau ada
 frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url:
+if frontend_url and frontend_url not in allowed_origins:
     allowed_origins.append(frontend_url)
 
 app.add_middleware(
