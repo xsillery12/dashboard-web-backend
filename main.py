@@ -18,11 +18,12 @@ app = FastAPI(
 allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "dashboard-web-frontend-production.up.railway.app",
 ]
 
 # Tambah frontend URL dari environment variable kalau ada
 frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url:
+if frontend_url and frontend_url not in allowed_origins:
     allowed_origins.append(frontend_url)
 
 app.add_middleware(
