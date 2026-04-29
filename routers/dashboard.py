@@ -9,36 +9,58 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 
 def build_filter(month_from=None, month_to=None, region=None, area=None, cabang=None):
+    from datetime import datetime
+
+    def parse_month(m):
+        try:
+            dt = datetime.strptime(m, "%b-%y")
+            return dt.strftime("Y-%m-01")
+        except:
+            return f"{m}-01"
+
     conditions = ["tipe_bulan = 'Bulanan'"]
     params = {}
 
     if month_from:
         conditions.append("bulan_date >= :month_from")
-    try:
-        from datetime import datetime
-
-        dt = datetime.strptime(month_from, "%b-%y")
-        params["month_from"] = dt.strftime("%Y-%m-01")
-    except:
-        params["month_from"] = f"{month_from}-01"
+        params["month_from"] = parse_month(month_from)
     if month_to:
         conditions.append("bulan_date <= :month_to")
-    try:
-        from datetime import datetime
+        params["month_to"] + parse_month(month_to)
 
-        dt = datetime.strptime(month_to, "%b-%y")
-        params["month_to"] = dt.strftime("%Y-%m-01")
-    except:
-        params["month_to"] = f"{month_to}-01"
+    # Support multiple values (comma separated)
     if region:
-        conditions.append("region = :region")
-        params["region"] = region
+        regions = [r.strip() for r in region.split(",")]
+        if len(regions) == 1:
+            conditions.append("region = :region")
+            params["region"] = regions[0]
+        else:
+            placeholders = ", ".join([f":region_{i}" for i in range(len(regions))])
+            conditions.append(f"region IN ({placeholders})")
+            for i, r in enumerate(regions):
+                params[f"region_{i}"] = r
+
     if area:
-        conditions.append("area = :area")
-        params["area"] = area
+        areas = [a.strip() for a in area.split(",")]
+        if len(areas) == 1:
+            conditions.append("area = :area")
+            params["area"] = areas[0]
+        else:
+            placeholders = ", ".join([f":area_{i}" for i in range(len(areas))])
+            conditions.append(f"area IN ({placeholders})")
+            for i, a in enumerate(areas):
+                params[f"area_{i}"] = a
+
     if cabang:
-        conditions.append("nama_cabang = :cabang")
-        params["cabang"] = cabang
+        cabangs = [c.strip() for c in cabang.split(",")]
+        if len(cabangs) == 1:
+            conditions.append("nama_cabang = :cabang")
+            params["cabang"] = cabangs[0]
+        else:
+            placeholders = ", ".join([f":cabang_{i}" for i in range(len(cabangs))])
+            conditions.append(f"nama_cabang IN ({placeholders})")
+            for i, c in enumerate(cabangs):
+                params[f"cabang_{i}"] = c
 
     where = "WHERE " + " AND ".join(conditions)
     return where, params
@@ -192,12 +214,13 @@ def get_chart_device(
 def get_chart_region(
     month_from: Optional[str] = Query(None),
     month_to: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
     cabang: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    where, params = build_filter(month_from, month_to, None, area, cabang)
+    where, params = build_filter(month_from, month_to, region, area, cabang)
     # Tambah exclude Aceh
     where = where + " AND region != 'RO ACEH'"
     query = f"""
