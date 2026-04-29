@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 from database import engine, Base
 from routers import upload, dashboard, auth
+import os
 
 # Buat tabel kalau belum ada
 Base.metadata.create_all(bind=engine)
@@ -14,9 +15,19 @@ app = FastAPI(
 )
 
 # CORS — izinkan Vue.js connect ke API ini
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
+# Tambah frontend URL dari environment variable kalau ada
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    allowed_origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,3 +42,9 @@ app.include_router(auth.router)
 @app.get("/")
 def root():
     return {"message": "BSI Agen Dashboard API", "status": "running"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
