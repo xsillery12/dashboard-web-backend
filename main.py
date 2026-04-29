@@ -18,7 +18,7 @@ app = FastAPI(
 allowed_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
-    "dashboard-web-frontend-production.up.railway.app",
+    "https://dashboard-web-frontend-production.up.railway.app",
 ]
 
 # Tambah frontend URL dari environment variable kalau ada
