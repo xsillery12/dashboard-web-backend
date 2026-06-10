@@ -1,25 +1,36 @@
 import pandas as pd
 from datetime import datetime
+from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
 
 
-def load_jaringan_mapping(jaringan_path: str) -> dict:
-    """Load mapping kode_cabang -> (kelurahan, kecamatan, kab_kota) dari file jaringan BSI"""
-    df_jaringan = pd.read_excel(jaringan_path)
+def load_jaringan_mapping() -> dict:
+    """Load mapping outlet_code_bsi -> (kelurahan, kecamatan, kab_kota) dari DB"""
+    with engine.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT outlet_code_bsi, kelurahan, kecamatan, kab_kota
+            FROM cabang_region
+            WHERE outlet_code_bsi IS NOT NULL
+        """)).fetchall()
+
     mapping = {}
-    for _, row in df_jaringan.iterrows():
-        kode = str(row.get("OUTLET CODE BSI", "")).strip()
+    for r in rows:
+        kode = str(r.outlet_code_bsi).strip()
         if kode:
             mapping[kode] = {
-                "kelurahan": str(row.get("KELURAHAN", "")).strip(),
-                "kecamatan": str(row.get("KECAMATAN", "")).strip(),
-                "kab_kota": str(row.get("KOTA/KAB", "")).strip(),
+                "kelurahan": r.kelurahan or "",
+                "kecamatan": r.kecamatan or "",
+                "kab_kota": r.kab_kota or "",
             }
     return mapping
 
 
-def transform_excel(
-    file, jaringan_path: str = "Mapping_Data_Jaringan_BSI_Agen_2026.xlsx"
-) -> pd.DataFrame:
+def transform_excel(file) -> pd.DataFrame:
     df_raw = pd.read_excel(file, header=None)
 
     header_main = df_raw.iloc[3].tolist()
@@ -136,20 +147,18 @@ def transform_excel(
         df_long["jumlah_transaksi"].notna() | df_long["volume_transaksi"].notna()
     ]
 
-    # Tipe bulan
     df_long["tipe_bulan"] = df_long["bulan"].apply(
         lambda x: "Total Tahunan" if str(x).replace(".0", "").isdigit() else "Bulanan"
     )
 
-    # Konversi bulan ke date
     df_long["bulan_date"] = pd.to_datetime(
         df_long["bulan"].where(df_long["tipe_bulan"] == "Bulanan"),
         format="%b-%y",
         errors="coerce",
     )
 
-    # ── Mapping kelurahan, kecamatan, kab_kota dari data jaringan ─────────────
-    jaringan_map = load_jaringan_mapping(jaringan_path)
+    # ── Mapping dari DB tabel cabang_region ──
+    jaringan_map = load_jaringan_mapping()
     df_long["kelurahan"] = df_long["kode_cabang"].map(
         lambda x: jaringan_map.get(str(x).strip(), {}).get("kelurahan", "")
     )
@@ -188,7 +197,6 @@ def transform_excel(
     df_long["fee_bank"] = pd.to_numeric(df_long["fee_bank"], errors="coerce").fillna(0)
     df_long["fee_agen"] = pd.to_numeric(df_long["fee_agen"], errors="coerce").fillna(0)
 
-    # Urutan kolom sesuai PostgreSQL
     df_long = df_long[
         [
             "kode_agen",
